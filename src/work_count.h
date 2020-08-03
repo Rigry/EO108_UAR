@@ -1,11 +1,10 @@
 #pragma once
 
-#include <array>
-#include "constant.h"
 #include "timers.h"
 
 namespace {
-    constexpr auto remember_every        {60000};
+    constexpr auto update_minutes        {60'000};
+    constexpr auto remember_every        {3'600'000};
     constexpr auto update_every_remember {60};
 }
 
@@ -14,50 +13,42 @@ struct Minutes {
 };
 
 // считает время работы лампы в минутах
+template<class Flash_data>
 struct Work_count : TickSubscriber {
+    
+    Flash_data& flash;
     int tick_cnt {0};
     Minutes minutes;
-    const uint16_t& bad_lamps;
-    std::array<uint16_t, glob::max_lamps>& hours;
-    uint8_t& lamps_qty;
+    uint16_t hours{0}; 
+    uint16_t mins{0};
 
-    Work_count (
-          uint16_t& bad_lamps
-        , std::array<uint16_t, glob::max_lamps>& hours
-        , uint8_t& lamps_qty
-    ) : bad_lamps {bad_lamps}, hours {hours}, lamps_qty{lamps_qty}
-    {}
+    Work_count (Flash_data& flash) : flash{flash} {start();}
 
     Minutes* get_data() { return &minutes; }
-    void start() { tick_subscribe(); }
-    void stop() { tick_unsubscribe(); }
+    void start() { tick_subscribe();  }
+    void stop()  { tick_unsubscribe();}
 
     void notify() override {
-        if (++tick_cnt == remember_every) {
+        if (not (++tick_cnt % update_minutes)) {
+            minutes.data++;
+            mins = minutes.data % update_every_remember;
+        }
+        
+        if (tick_cnt == remember_every) {
             tick_cnt = 0;
-            for (auto i {0}; i < lamps_qty; i++) {
-                minutes.data[i] += not ((bad_lamps >> i) & 0b1);
-                hours[i] = get_hours(i);
-            }
+            hours = get_hours();
+            flash.hours += 1;
         }
     }
 
-    uint16_t get_hours (int i) { return minutes.data[i] / update_every_remember; }
-    void reset (int i) {
-        minutes.data[i] = 0;
-        hours[i] = 0;
+    uint16_t get_hours () {
+        return minutes.data / update_every_remember;
     }
-
     void reset () {
-        for (auto i {0}; i < 10; i++) {
-            reset(i);
-        }
+        minutes.data = 0;
+        flash.hours  = 0;
+        hours        = 0;
+        mins         = 0;
     }
-
-    void reset_by_mask (uint16_t mask) {
-        for (auto i {0}; i < 10; i++) {
-            if ((mask >> i) & 0b1)
-                reset(i);
-        }
-    }
+    
 };

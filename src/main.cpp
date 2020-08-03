@@ -5,11 +5,11 @@
 #include "init_clock.h"
 #include "periph_rcc.h"
 #include "periph_flash.h"
+#include "flash.h"
 #include "pin.h"
 #include "literals.h"
 #include "button.h"
 #include "menu.h"
-#include "flash.h"
 
 using Right = mcu::PC13;
 using Enter = mcu::PC14;
@@ -31,28 +31,35 @@ int main()
 {
    struct Flash_data {
       
-      uint16_t hours = 0;
+      uint16_t hours  = 0;
+      uint16_t power  = 200;
+      uint16_t on_off = 0;
+      uint16_t reset  = 0;
       
-   } flash;
+   }flash;
    
    [[maybe_unused]] auto _ = Flash_updater<
         mcu::FLASH::Sector::_26
       , mcu::FLASH::Sector::_25
    >::make (&flash);
 
+   // подсчёт часов работы
+   auto work_count = Work_count{flash};
+
    volatile decltype(auto) pwm = PWM::make<mcu::Periph::TIM3, Vent>(990);
+   pwm.frequency = 20'000;
+   pwm.duty_cycle = static_cast<uint16_t>(flash.power);
+   pwm.out_enable();
 
    auto up    = Button<Right>();
    auto down  = Button<Left>();
    auto enter = Button<Enter>();
    constexpr auto hd44780_pins = HD44780_pins<RS, RW, E, DB4, DB5, DB6, DB7>{};
-   [[maybe_unused]] auto menu = Menu (hd44780_pins, up, down, enter, flash, pwm);
+   [[maybe_unused]] auto menu = Menu (hd44780_pins, up, down, enter, flash, pwm, work_count);
 
-  
-   
+   flash.on_off++;
+
    while(1){
-      
-     
       __WFI();
    }
 }

@@ -54,7 +54,7 @@ MCU_F0 = $(CPU_F0) -mthumb $(FPU_F0) $(FLOAT-ABI_F0)
 
 # compile gcc flags
 CFLAGS_F0  = $(MCU_F0) $(C_INCLUDES) $(OPT)
-CFLAGS_F0 += -fdata-sections -ffunction-sections -fno-exceptions -fno-strict-volatile-bitfields -fno-threadsafe-statics
+CFLAGS_F0 += -fdata-sections -ffunction-sections -fno-exceptions -fno-strict-volatile-bitfields -fno-threadsafe-statics -fexec-charset=cp1251
 CFLAGS_F0 += -Wall -Wno-register  -Wno-packed-bitfield-compat -Wno-strict-aliasing
 CFLAGS_F0 += -g -gdwarf-2 
 
